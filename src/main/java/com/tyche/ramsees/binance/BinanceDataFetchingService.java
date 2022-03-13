@@ -1,6 +1,7 @@
 package com.tyche.ramsees.binance;
 
 import com.tyche.ramsees.Step;
+import com.tyche.ramsees.api.dto.SlotsConfigProps;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class BinanceDataFetchingService {
 
+    private final SlotsConfigProps slotsConfigProps;
     private final DataFetcherBinanceImpl dataFetcherBinanceImpl;
 
     private final Deque<Double> slowMovingAverage = new LinkedList<>();
@@ -32,11 +34,11 @@ public class BinanceDataFetchingService {
         iteration++;
         log.info("This is iteration number {}", iteration);
         var priceResponseDTO = dataFetcherBinanceImpl.getPairPrice("ETHBUSD");
-        if (slowPriceHistory.size() == 12) {
+        if (slowPriceHistory.size() == slotsConfigProps.getSlow()) {
             slowPriceHistory.remove(0);
             slowMovingAverage.removeFirst();
         }
-        if (fastPriceHistory.size() == 6) {
+        if (fastPriceHistory.size() == slotsConfigProps.getFast()) {
             fastPriceHistory.remove(0);
             fastMovingAverage.removeFirst();
         }
@@ -48,7 +50,7 @@ public class BinanceDataFetchingService {
         fastMovingAverage.add(calculateMovingAverage(fastPriceHistory));
 
         // All needed previous moving averages are saved
-        if (slowPriceHistory.size() == 12) {
+        if (slowPriceHistory.size() == slotsConfigProps.getSlow()) {
             log.info("Current slow moving average: {}", calculateMovingAverage(slowPriceHistory));
             log.info("Current fast moving average: {}", calculateMovingAverage(fastPriceHistory));
 
