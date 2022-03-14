@@ -1,6 +1,6 @@
 application:
     average-slots-splits:
-        fast: 30
-        slow: 60
+        fast: 6
+        slow: 12
     scheduler:
-        frequency: 60000
+        frequency: 300000
