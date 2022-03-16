@@ -14,12 +14,12 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BinanceDataFetchingService {
+public class BinanceDataFetchingService implements ClearData {
 
     private final SlotsConfigProps slotsConfigProps;
     private final DataFetcherBinanceImpl dataFetcherBinanceImpl;
     private final TradingCalculator tradingCalculator = new TradingCalculator();
-    private final TradingManager tradingManager = new TradingManager();
+    private final TradingManager tradingManager = new TradingManager(this);
 
     private final Deque<Double> fastMovingAverage = new LinkedList<>();
     private final Deque<Double> slowMovingAverage = new LinkedList<>();
@@ -69,5 +69,13 @@ public class BinanceDataFetchingService {
                     slowPriceHistory);
             }
         }
+    }
+
+    @Override
+    public void callback() {
+        fastMovingAverage.clear();
+        fastPriceHistory.clear();
+        slowMovingAverage.clear();
+        slowPriceHistory.clear();
     }
 }

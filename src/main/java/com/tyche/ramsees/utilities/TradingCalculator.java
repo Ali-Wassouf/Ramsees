@@ -14,12 +14,12 @@ public class TradingCalculator {
   }
 
   public Double calculateMinimumTargetProfit(final Double price) {
-    Double profit = price * 0.0015;
+    Double profit = price * 0.004;
     return price + profit;
   }
 
   public Double calculateStopLoss(final Double price) {
-    var maximumLoss = price * 0.004;
+    var maximumLoss = price * 0.002;
     return price - maximumLoss;
   }
 

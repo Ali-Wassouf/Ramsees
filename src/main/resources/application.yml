@@ -3,4 +3,4 @@ application:
         fast: 6
         slow: 12
     scheduler:
-        frequency: 300000
+        frequency: 5000

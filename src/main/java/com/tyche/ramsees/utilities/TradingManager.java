@@ -1,6 +1,7 @@
 package com.tyche.ramsees.utilities;
 
 import com.tyche.ramsees.Step;
+import com.tyche.ramsees.binance.ClearData;
 import java.util.ArrayList;
 import java.util.Deque;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TradingManager {
   private final TradingCalculator tradingCalculator = new TradingCalculator();
+  private ClearData clearData;
   private Step step = Step.BUY_NEXT;
 
   private Double buyingPrice = 0.0;
@@ -15,6 +17,10 @@ public class TradingManager {
   private Double stopLoss = 0.0;
   private Double budget = 1000.0;
   private Double eth = 0.0;
+
+  public TradingManager(ClearData clearData) {
+    this.clearData = clearData;
+  }
 
   public void checkForBuyingSignal(
       Deque<Double> slowMovingAverage,
@@ -52,8 +58,8 @@ public class TradingManager {
     minimumTargetProfitPrice = tradingCalculator.calculateMinimumTargetProfit(buyingPrice);
     stopLoss = tradingCalculator.calculateStopLoss(buyingPrice);
 
-    budget -= (budget * 0.01); // Binance Fees 0.1%
     eth = budget / buyingPrice;
+    eth -= (eth * 0.001); // Binance Fees 0.1%, charged to the assets I receive
     budget = 0.0;
 
     step = Step.SELL_NEXT;
@@ -80,12 +86,12 @@ public class TradingManager {
 
       Double currentPrice = slowPriceHistory.get(slowPriceHistory.size() - 1);
       // Fast moving average crosses the slow moving average upward
-      if (currentPrice < stopLoss || (previousFastMovingAverage >= previousSlowMovingAverage &&
-          currentFastMovingAverage < currentSlowMovingAverage)) {
-        if (minimumTargetProfitPrice < currentPrice) {
-          log.info("Selling signal found...");
-          sell(currentPrice); // Could use fastPriceHistory too
-        }
+      if (currentPrice < stopLoss ||
+          (previousFastMovingAverage >= previousSlowMovingAverage &&
+          currentFastMovingAverage < currentSlowMovingAverage) &&
+          minimumTargetProfitPrice < currentPrice) {
+            log.info("Selling signal found...");
+            sell(currentPrice); // Could use fastPriceHistory too
       }
 
       // Restore data
@@ -97,15 +103,22 @@ public class TradingManager {
   }
 
   public void sell(Double sellingPrice) {
-    eth -= (eth * 0.01); // Binance Fees 0.1%
-
-    buyingPrice = eth * sellingPrice;
+    budget = eth * sellingPrice;
+    budget -= (budget * 0.001); // Binance Fees 0.1%, charged to the assets I receive
     eth = 0.0;
 
     step = Step.BUY_NEXT;
     log.info("Selling At Price: {}", sellingPrice);
     log.info("Budget: {}", budget);
     log.info("Eth: {}", eth);
+
+    /*
+    * Since the price update interval is too short, it's likely for the fast moving average to cross
+    * the slow one upward again at the top after selling just before prices goes down at a start of
+    * a downward trend. A simple fix is to clear the data and collect it again which will prevent
+    * the buying for some time.
+    */
+    clearData.callback();
   }
 
   public Step getStep() {
