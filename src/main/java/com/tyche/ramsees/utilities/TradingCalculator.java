@@ -14,7 +14,7 @@ public class TradingCalculator {
   }
 
   public Double calculateMinimumTargetProfit(final Double price) {
-    Double profit = price * 0.004;
+    Double profit = price * 0.002;
     return price + profit;
   }
 
