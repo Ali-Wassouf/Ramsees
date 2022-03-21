@@ -88,8 +88,9 @@ public class TradingManager {
       // Fast moving average crosses the slow moving average upward
       if (currentPrice < stopLoss ||
           (previousFastMovingAverage >= previousSlowMovingAverage &&
-          currentFastMovingAverage < currentSlowMovingAverage) &&
-          minimumTargetProfitPrice < currentPrice) {
+          currentFastMovingAverage < currentSlowMovingAverage &&
+          minimumTargetProfitPrice < currentPrice)
+      ) {
             log.info("Selling signal found...");
             sell(currentPrice); // Could use fastPriceHistory too
       }
