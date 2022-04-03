@@ -1,7 +1,10 @@
 package com.tyche.ramsees.binance;
 
+import com.binance.connector.client.impl.SpotClientImpl;
+import com.google.gson.Gson;
 import com.tyche.ramsees.api.dto.PriceResponseDTO;
 import com.tyche.ramsees.fetchers.DataFetcher;
+import java.util.LinkedHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -10,15 +13,19 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class DataFetcherBinanceImpl implements DataFetcher {
 
-    private static final String BINANCE_TICKER_PRICE_ENDPOINT =
-        "https://api.binance.com/api/v3/ticker/price";
-    private final RestTemplate restTemplate;
-
     public PriceResponseDTO getPairPrice(String symbol) {
-        var response =
-            restTemplate.getForEntity(
-                BINANCE_TICKER_PRICE_ENDPOINT + "?symbol=" + symbol,
-                PriceResponseDTO.class);
-        return response.getBody();
+        SpotClientImpl client = new SpotClientImpl();
+
+        LinkedHashMap<String,Object> parameters = new LinkedHashMap<>();
+        parameters.put("symbol","ETHBUSD");
+
+        String result = client.createMarket().tickerSymbol(parameters);
+
+        Gson gson = new Gson();
+        PriceResponseDTO priceResponseDTO = gson.fromJson(result,
+            PriceResponseDTO.class);
+
+        return priceResponseDTO;
     }
+
 }
