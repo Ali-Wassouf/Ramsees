@@ -1,7 +1,7 @@
 package com.tyche.ramsees.binance;
 
 import com.tyche.ramsees.Step;
-import com.tyche.ramsees.api.dto.SlotsConfigProps;
+import com.tyche.ramsees.api.dto.props.SlotsConfigProps;
 import com.tyche.ramsees.utilities.TradingCalculator;
 import com.tyche.ramsees.utilities.TradingManager;
 import java.util.ArrayList;
