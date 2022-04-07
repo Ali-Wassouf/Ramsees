@@ -11,8 +11,8 @@ public class BinanceDataFetcherJob {
 
     private final BinanceDataFetchingService binanceDataFetchingService;
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedDelay = 60000)
     public void runJob() {
-        binanceDataFetchingService.getPairPrice();
+        binanceDataFetchingService.getKlines();
     }
 }

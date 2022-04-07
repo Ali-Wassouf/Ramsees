@@ -1,81 +1,93 @@
 package com.tyche.ramsees.binance;
 
 import com.tyche.ramsees.Step;
-import com.tyche.ramsees.api.dto.props.SlotsConfigProps;
-import com.tyche.ramsees.utilities.TradingCalculator;
+import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import com.tyche.ramsees.utilities.TradingManager;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.LinkedList;
+import java.time.ZonedDateTime;
+import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.ta4j.core.BarSeries;
+import org.ta4j.core.BaseBarSeriesBuilder;
+import org.ta4j.core.BaseStrategy;
+import org.ta4j.core.Rule;
+import org.ta4j.core.Strategy;
+import org.ta4j.core.indicators.SMAIndicator;
+import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
+import org.ta4j.core.rules.CrossedDownIndicatorRule;
+import org.ta4j.core.rules.CrossedUpIndicatorRule;
+import org.ta4j.core.rules.StopGainRule;
+import org.ta4j.core.rules.StopLossRule;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class BinanceDataFetchingService implements ClearData {
+public class BinanceDataFetchingService {
 
-    private final SlotsConfigProps slotsConfigProps;
+//    private SlotsConfigProps slotsConfigProps;
+    public static final int SHORT_TIME = 5;
+    public static final int LONG_TIME = 10;
+
     private final DataFetcherBinanceImpl dataFetcherBinanceImpl;
-    private final TradingCalculator tradingCalculator = new TradingCalculator();
-    private final TradingManager tradingManager = new TradingManager(this);
-
-    private final Deque<Double> fastMovingAverage = new LinkedList<>();
-    private final Deque<Double> slowMovingAverage = new LinkedList<>();
-    private final ArrayList<Double> fastPriceHistory = new ArrayList<>();
-    private final ArrayList<Double> slowPriceHistory = new ArrayList<>();
+    private final TradingManager tradingManager = new TradingManager();
     private int iteration = 0;
 
+    // Klines
+    BarSeries series;
+    ClosePriceIndicator closePrice;
+    SMAIndicator shortSma;
+    SMAIndicator longSma;
+    Rule buyingRule;
+    Rule sellingRule;
+    Strategy strategy;
 
-    public void getPairPrice() {
+    @PostConstruct
+    public void init() {
+        series = new BaseBarSeriesBuilder().withMaxBarCount(200).withName("BINANCE_ETHBUSD").build();
+        closePrice = new ClosePriceIndicator(series);
+        shortSma = new SMAIndicator(closePrice, SHORT_TIME);
+        longSma = new SMAIndicator(closePrice, LONG_TIME);
+        buyingRule = new CrossedUpIndicatorRule(shortSma, longSma);
+        sellingRule = new CrossedDownIndicatorRule(shortSma, longSma)
+            .or(new StopLossRule(closePrice, 0.3))
+            .or(new StopGainRule(closePrice, 0.5));
+        strategy = new BaseStrategy(buyingRule, sellingRule);
+    }
+
+    public void getKlines() {
         log.info("-----------------------------------------------");
         log.info("Iteration {}", ++iteration);
 
-        var priceResponseDTO =
-            dataFetcherBinanceImpl.getPairPrice("ETHBUSD");
+        var klineList =
+            dataFetcherBinanceImpl.fetchLatestKline("ETHBUSD", "1m");
 
-        if (fastPriceHistory.size() == slotsConfigProps.getFast()) {
-            fastPriceHistory.remove(0);
-            fastMovingAverage.removeFirst();
+        for(KlineResponseDTO k : klineList) {
+            series.addBar(
+                ZonedDateTime.now(),
+                Double.valueOf(k.open),
+                Double.valueOf(k.high),
+                Double.valueOf(k.low),
+                Double.valueOf(k.close),
+                Double.valueOf(k.volume)
+            );
         }
-        if (slowPriceHistory.size() == slotsConfigProps.getSlow()) {
-            slowPriceHistory.remove(0);
-            slowMovingAverage.removeFirst();
-        }
 
-        fastPriceHistory.add(Double.valueOf(priceResponseDTO.getPrice()));
-        slowPriceHistory.add(Double.valueOf(priceResponseDTO.getPrice()));
+        log.info(series.getLastBar().toString());
+        log.info("Current budget is {}", tradingManager.getBudget());
+        log.info("Current Eth is {}", tradingManager.getEth());
 
-        fastMovingAverage.add(tradingCalculator.calculateAveragePrice(fastPriceHistory));
-        slowMovingAverage.add(tradingCalculator.calculateAveragePrice(slowPriceHistory));
-
-        // All needed previous moving averages are saved
-        if (slowPriceHistory.size() == slotsConfigProps.getSlow()) {
-            log.info("Current slow moving average: {}",
-                tradingCalculator.calculateAveragePrice(slowPriceHistory));
-            log.info("Current fast moving average: {}",
-                tradingCalculator.calculateAveragePrice(fastPriceHistory));
-
+        int endIndex = series.getEndIndex();
+        if (strategy.shouldEnter(endIndex)) {
+            // Entering...
             if (tradingManager.getStep() == Step.BUY_NEXT) {
-                tradingManager.checkForBuyingSignal(
-                    slowMovingAverage,
-                    fastMovingAverage,
-                    slowPriceHistory);
-            } else {
-                tradingManager.checkForSellingSignal(
-                    slowMovingAverage,
-                    fastMovingAverage,
-                    slowPriceHistory);
+                tradingManager.buy(series.getLastBar().getClosePrice().doubleValue());
+            }
+        } else if (strategy.shouldExit(endIndex)) {
+            // Exiting...
+            if (tradingManager.getStep() == Step.SELL_NEXT) {
+                tradingManager.sell(series.getLastBar().getClosePrice().doubleValue());
             }
         }
-    }
-
-    @Override
-    public void callback() {
-        fastMovingAverage.clear();
-        fastPriceHistory.clear();
-        slowMovingAverage.clear();
-        slowPriceHistory.clear();
     }
 }
