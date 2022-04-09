@@ -1,4 +1,4 @@
-package com.tyche.ramsees.api.dto;
+package com.tyche.ramsees.api.dto.props;
 
 import lombok.Getter;
 import lombok.Setter;

@@ -1,6 +1,6 @@
 package com.tyche.ramsees.binance.job;
 
-import com.tyche.ramsees.binance.BinanceDataFetchingService;
+import com.tyche.ramsees.binance.BinanceTradingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -9,10 +9,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class BinanceDataFetcherJob {
 
-    private final BinanceDataFetchingService binanceDataFetchingService;
+    private final BinanceTradingService binanceTradingService;
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedDelay = 60000)
     public void runJob() {
-        binanceDataFetchingService.getPairPrice();
+        binanceTradingService.checkTheMarket();
     }
 }
