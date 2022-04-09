@@ -23,43 +23,42 @@ import org.springframework.web.client.RestTemplate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class DataFetcherBinanceImpl implements DataFetcher {
+public class BinanceDataFetcher implements DataFetcher {
 
     public PriceResponseDTO getPairPrice(String symbol) {
-        SpotClientImpl client = new SpotClientImpl();
+        var client = new SpotClientImpl();
 
-        LinkedHashMap<String,Object> parameters = new LinkedHashMap<>();
+        var parameters = new LinkedHashMap<String,Object>();
         parameters.put("symbol", symbol);
 
-        String result = client.createMarket().tickerSymbol(parameters);
+        var result = client.createMarket().tickerSymbol(parameters);
 
-        Gson gson = new Gson();
-        PriceResponseDTO priceResponseDTO = gson.fromJson(result,
+        var gson = new Gson();
+        return gson.fromJson(result,
             PriceResponseDTO.class);
 
-        return priceResponseDTO;
     }
 
-    public ArrayList<KlineResponseDTO> fetchLatestKline(String symbol, String interval) {
-        SpotClientImpl client = new SpotClientImpl();
+    public List<KlineResponseDTO> fetchLatestKline(String symbol, String interval) {
+        var client = new SpotClientImpl();
 
-        LinkedHashMap<String,Object> parameters = new LinkedHashMap<>();
+        var parameters = new LinkedHashMap<String,Object>();
         parameters.put("symbol", symbol);
         parameters.put("interval", interval);
         parameters.put("limit", 1);
 
-        String result = client.createMarket().klines(parameters);
+        var result = client.createMarket().klines(parameters);
 
-        JSONArray jsonArray = new JSONArray(result);
-        ArrayList<KlineResponseDTO> klineList = new ArrayList<>();
+        var jsonArray = new JSONArray(result);
+        var klineList = new ArrayList<KlineResponseDTO>();
 
         for(Object o : jsonArray){
             try {
-                KlineResponseDTO klineResponseDTO =
+                var klineResponseDTO =
                     new ObjectMapper().readValue(o.toString(), KlineResponseDTO.class);
                 klineList.add(klineResponseDTO);
             } catch (JsonProcessingException e) {
-                log.info(e.getMessage());
+                log.info("Exception while fetching the klines",e);
             }
         }
 

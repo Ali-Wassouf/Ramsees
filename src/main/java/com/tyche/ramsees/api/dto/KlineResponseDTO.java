@@ -7,95 +7,42 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.ArrayList;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Kline/Candlestick bars for a symbol. Klines are uniquely identified by their open time.
  */
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
-@JsonPropertyOrder({
-    "openTime",
-    "open",
-    "high",
-    "low",
-    "close",
-    "volume",
-    "closeTime",
-    "quoteAssetVolume",
-    "numberOfTrades",
-    "takerBuyBaseAssetVolume",
-    "takerBuyQuoteAssetVolume",
-    "unknown"
-})
+@Getter
+@Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class KlineResponseDTO {
-    public Long openTime;
-    public String open;
-    public String high;
-    public String low;
-    public String close;
-    public String volume;
-    public Long closeTime;
-    public String quoteAssetVolume;
-    public Long numberOfTrades;
-    public String takerBuyBaseAssetVolume;
-    public String takerBuyQuoteAssetVolume;
-    public String unknown;
-
-    @JsonCreator
-    public KlineResponseDTO(
-        @JsonProperty("openTime")
-        Long openTime,
-        @JsonProperty("open")
-        String open,
-        @JsonProperty("high")
-        String high,
-        @JsonProperty("low")
-        String low,
-        @JsonProperty("close")
-        String close,
-        @JsonProperty("volume")
-        String volume,
-        @JsonProperty("closeTime")
-        Long closeTime,
-        @JsonProperty("quoteAssetVolume")
-        String quoteAssetVolume,
-        @JsonProperty("numberOfTrades")
-        Long numberOfTrades,
-        @JsonProperty("takerBuyBaseAssetVolume")
-        String takerBuyBaseAssetVolume,
-        @JsonProperty("takerBuyQuoteAssetVolume")
-        String takerBuyQuoteAssetVolume,
-        @JsonProperty("unknown")
-        String unknown
-    ){
-        this.openTime = openTime;
-        this.open = open;
-        this.high = high;
-        this.low = low;
-        this.close = close;
-        this.volume = volume;
-        this.closeTime = closeTime;
-        this.quoteAssetVolume = quoteAssetVolume;
-        this.numberOfTrades = numberOfTrades;
-        this.takerBuyBaseAssetVolume = takerBuyBaseAssetVolume;
-        this.takerBuyQuoteAssetVolume = takerBuyQuoteAssetVolume;
-        this.unknown = unknown;
-    }
+    private Long openTime;
+    private String open;
+    private String high;
+    private String low;
+    private String close;
+    private String volume;
+    private Long closeTime;
+    private String quoteAssetVolume;
+    private Long numberOfTrades;
+    private String takerBuyBaseAssetVolume;
+    private String takerBuyQuoteAssetVolume;
+    private String unknown;
 
     @Override
     public String toString() {
-        return new StringBuilder()
-            .append("openTime: ").append(openTime)
-            .append("open: ").append(open)
-            .append("high: ").append(high)
-            .append("low: ").append(low)
-            .append("close: ").append(close)
-            .append("volume: ").append(volume)
-            .append("closeTime: ").append(closeTime)
-            .append("quoteAssetVolume: ").append(quoteAssetVolume)
-            .append("numberOfTrades: ").append(numberOfTrades)
-            .append("takerBuyBaseAssetVolume: ").append(takerBuyBaseAssetVolume)
-            .append("takerBuyQuoteAssetVolume: ").append(takerBuyQuoteAssetVolume)
-            .toString();
+        return "openTime: " + openTime
+            + "open: " + open
+            + "high: " + high
+            + "low: " + low
+            + "close: " + close
+            + "volume: " + volume
+            + "closeTime: " + closeTime
+            + "quoteAssetVolume: " + quoteAssetVolume
+            + "numberOfTrades: " + numberOfTrades
+            + "takerBuyBaseAssetVolume: " + takerBuyBaseAssetVolume
+            + "takerBuyQuoteAssetVolume: " + takerBuyQuoteAssetVolume;
     }
 }

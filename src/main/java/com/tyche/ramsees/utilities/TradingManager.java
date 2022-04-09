@@ -2,15 +2,15 @@ package com.tyche.ramsees.utilities;
 
 import com.tyche.ramsees.Step;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
 public class TradingManager {
   private Step step = Step.BUY_NEXT;
 
   private Double budget = 1000.0;
   private Double eth = 0.0;
-
-  public TradingManager() { }
 
   public void buy(Double buyingPrice) {
     eth = budget / buyingPrice;
