@@ -27,7 +27,7 @@ public class TradingManager {
     budget = eth * sellingPrice;
     budget -= (budget * 0.001); // Binance Fees 0.1%, charged to the assets I receive
     eth = 0.0;
-    setStep(Step.SELL_NEXT);
+    setStep(Step.BUY_NEXT);
 
     log.info("Selling At Price: {}", sellingPrice);
     log.info("Budget: {}", budget);

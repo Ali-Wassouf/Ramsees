@@ -26,8 +26,10 @@ import org.ta4j.core.rules.StopLossRule;
 public class BinanceDataFetchingService {
 
 //    private SlotsConfigProps slotsConfigProps;
-    public static final int SHORT_TIME = 5;
-    public static final int LONG_TIME = 10;
+    public static final int SHORT_SEQUENCE = 7;
+    public static final int LONG_SEQUENCE = 14;
+    public static final Number STOP_LOSS = 0.5;
+    public static final Number STOP_GAIN = 1;
 
     private final DataFetcherBinanceImpl dataFetcherBinanceImpl;
     private final TradingManager tradingManager = new TradingManager();
@@ -44,14 +46,14 @@ public class BinanceDataFetchingService {
 
     @PostConstruct
     public void init() {
-        series = new BaseBarSeriesBuilder().withMaxBarCount(200).withName("BINANCE_ETHBUSD").build();
+        series = new BaseBarSeriesBuilder().withMaxBarCount(LONG_SEQUENCE).withName("BINANCE_ETHBUSD").build();
         closePrice = new ClosePriceIndicator(series);
-        shortSma = new SMAIndicator(closePrice, SHORT_TIME);
-        longSma = new SMAIndicator(closePrice, LONG_TIME);
+        shortSma = new SMAIndicator(closePrice, SHORT_SEQUENCE);
+        longSma = new SMAIndicator(closePrice, LONG_SEQUENCE);
         buyingRule = new CrossedUpIndicatorRule(shortSma, longSma);
         sellingRule = new CrossedDownIndicatorRule(shortSma, longSma)
-            .or(new StopLossRule(closePrice, 0.3))
-            .or(new StopGainRule(closePrice, 0.5));
+            .or(new StopLossRule(closePrice, STOP_LOSS))
+            .or(new StopGainRule(closePrice, STOP_GAIN));
         strategy = new BaseStrategy(buyingRule, sellingRule);
     }
 
@@ -73,9 +75,7 @@ public class BinanceDataFetchingService {
             );
         }
 
-        log.info(series.getLastBar().toString());
-        log.info("Current budget is {}", tradingManager.getBudget());
-        log.info("Current Eth is {}", tradingManager.getEth());
+        logStatus();
 
         int endIndex = series.getEndIndex();
         if (strategy.shouldEnter(endIndex)) {
@@ -88,6 +88,16 @@ public class BinanceDataFetchingService {
             if (tradingManager.getStep() == Step.SELL_NEXT) {
                 tradingManager.sell(series.getLastBar().getClosePrice().doubleValue());
             }
+        }
+    }
+
+    private void logStatus() {
+        log.info(series.getLastBar().toString());
+        log.info("Current budget is {}", tradingManager.getBudget());
+        log.info("Current Eth is {}", tradingManager.getEth());
+        if(series.getBarCount() == LONG_SEQUENCE){
+            log.info("Short SMA {}", shortSma.getValue(SHORT_SEQUENCE - 1));
+            log.info("Long SMA {}", longSma.getValue(LONG_SEQUENCE - 1));
         }
     }
 }
