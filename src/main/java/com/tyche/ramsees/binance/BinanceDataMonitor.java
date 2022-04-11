@@ -11,10 +11,12 @@ import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
 import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Strategy;
-import org.ta4j.core.indicators.SMAIndicator;
+import org.ta4j.core.indicators.EMAIndicator;
+import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.rules.CrossedDownIndicatorRule;
 import org.ta4j.core.rules.CrossedUpIndicatorRule;
+import org.ta4j.core.rules.OverIndicatorRule;
 import org.ta4j.core.rules.StopGainRule;
 import org.ta4j.core.rules.StopLossRule;
 
@@ -22,11 +24,12 @@ import org.ta4j.core.rules.StopLossRule;
 @RequiredArgsConstructor
 @Slf4j
 public class BinanceDataMonitor {
-
-    public static final int SHORT_SEQUENCE = 7;
-    public static final int LONG_SEQUENCE = 14;
+    public static final int TREND_EMA = 100;
+    public static final int MACD_SHORT = 12;
+    public static final int MACD_LONG = 26;
+    public static final int MACD_SIGNAL_LENGTH = 9;
+    public static final Number STOP_GAIN = 0.6;
     public static final Number STOP_LOSS = 0.5;
-    public static final Number STOP_GAIN = 1;
 
     private final BinanceDataFetcher binanceDataFetcher;
 
@@ -35,20 +38,27 @@ public class BinanceDataMonitor {
 
     // Klines
     private BarSeries series;
-    private SMAIndicator shortSma;
-    private SMAIndicator longSma;
+    MACDIndicator macd;
+    EMAIndicator macdSignal;
+    EMAIndicator trendEma;
     private Strategy strategy;
 
     @PostConstruct
     public void init() {
-        series = new BaseBarSeriesBuilder().withMaxBarCount(LONG_SEQUENCE).withName("BINANCE_ETHBUSD").build();
+        // Init
+        series = new BaseBarSeriesBuilder().withMaxBarCount(TREND_EMA).withName("BINANCE_ETHBUSD").build();
         var closePrice = new ClosePriceIndicator(series);
-        shortSma = new SMAIndicator(closePrice, SHORT_SEQUENCE);
-        longSma = new SMAIndicator(closePrice, LONG_SEQUENCE);
-        var buyingRule = new CrossedUpIndicatorRule(shortSma, longSma);
-        var sellingRule = new CrossedDownIndicatorRule(shortSma, longSma)
-            .or(new StopLossRule(closePrice, STOP_LOSS))
-            .or(new StopGainRule(closePrice, STOP_GAIN));
+        macd = new MACDIndicator(closePrice, MACD_SHORT, MACD_LONG);
+        macdSignal = new EMAIndicator(macd, MACD_SIGNAL_LENGTH);
+        trendEma = new EMAIndicator(closePrice, TREND_EMA);
+
+        // Strategy
+        var buyingRule = new OverIndicatorRule(closePrice, trendEma)
+            .and(new CrossedUpIndicatorRule(macd, macdSignal));
+
+        var sellingRule = new CrossedDownIndicatorRule(macd, macdSignal)
+            .or(new StopGainRule(closePrice, STOP_GAIN))
+            .or(new StopLossRule(closePrice, STOP_LOSS));
         strategy = new BaseStrategy(buyingRule, sellingRule);
     }
 
@@ -58,9 +68,9 @@ public class BinanceDataMonitor {
 
         List<KlineResponseDTO> klineList;
         if(!minimumBarCountReached){
-            // Fetch the latest LONG_SEQUENCE amount of bars in one request
+            // Fetch the latest initial amount of bars in one request
             klineList =
-                binanceDataFetcher.fetchLatestKline("ETHBUSD", "1m", LONG_SEQUENCE);
+                binanceDataFetcher.fetchLatestKline("ETHBUSD", "1m", TREND_EMA);
             minimumBarCountReached = true;
         } else {
             klineList =
@@ -92,8 +102,9 @@ public class BinanceDataMonitor {
 
     private void logStatus() {
         log.info("Current price: " + series.getLastBar().getClosePrice());
-        log.info("shortSma: " + shortSma.getValue(series.getEndIndex()));
-        log.info("longSma: " + longSma.getValue(series.getEndIndex()));
+        log.info("trendEma: " + trendEma.getValue(series.getEndIndex()));
+        log.info("macd: " + macd.getValue(series.getEndIndex()));
+        log.info("macdSignal: " + macdSignal.getValue(series.getEndIndex()));
     }
 
     public double getLastBarValue() {
