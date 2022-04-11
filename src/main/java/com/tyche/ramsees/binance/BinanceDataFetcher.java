@@ -39,13 +39,13 @@ public class BinanceDataFetcher implements DataFetcher {
 
     }
 
-    public List<KlineResponseDTO> fetchLatestKline(String symbol, String interval) {
+    public List<KlineResponseDTO> fetchLatestKline(String symbol, String interval, Integer limit) {
         var client = new SpotClientImpl();
 
         var parameters = new LinkedHashMap<String,Object>();
         parameters.put("symbol", symbol);
         parameters.put("interval", interval);
-        parameters.put("limit", 1);
+        parameters.put("limit", limit);
 
         var result = client.createMarket().klines(parameters);
 

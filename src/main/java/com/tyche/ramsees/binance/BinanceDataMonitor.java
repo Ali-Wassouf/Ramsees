@@ -2,6 +2,7 @@ package com.tyche.ramsees.binance;
 
 import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import java.time.ZonedDateTime;
+import java.util.List;
 import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class BinanceDataMonitor {
     private final BinanceDataFetcher binanceDataFetcher;
 
     private int iteration = 0;
+    private boolean minimumBarCountReached = false;
 
     // Klines
     private BarSeries series;
@@ -54,8 +56,17 @@ public class BinanceDataMonitor {
         log.info("-----------------------------------------------");
         log.info("Iteration {}", ++iteration);
 
-        var klineList =
-            binanceDataFetcher.fetchLatestKline("ETHBUSD", "1m");
+        List<KlineResponseDTO> klineList;
+        if(!minimumBarCountReached){
+            // Fetch the latest LONG_SEQUENCE amount of bars in one request
+            klineList =
+                binanceDataFetcher.fetchLatestKline("ETHBUSD", "1m", LONG_SEQUENCE);
+            minimumBarCountReached = true;
+        } else {
+            klineList =
+                binanceDataFetcher.fetchLatestKline("ETHBUSD", "1m", 1);
+        }
+
 
         for(KlineResponseDTO k : klineList) {
             series.addBar(
@@ -71,20 +82,18 @@ public class BinanceDataMonitor {
         logStatus();
     }
 
-    public boolean shouldEnter(){
+    public boolean shouldEnter() {
         return strategy.shouldEnter(series.getEndIndex());
     }
 
-    public boolean shouldExit(){
+    public boolean shouldExit() {
         return strategy.shouldExit(series.getEndIndex());
     }
 
     private void logStatus() {
-        log.info(series.getLastBar().toString());
-        if(series.getBarCount() == LONG_SEQUENCE){
-            log.info("Short SMA {}", shortSma.getValue(SHORT_SEQUENCE - 1));
-            log.info("Long SMA {}", longSma.getValue(LONG_SEQUENCE - 1));
-        }
+        log.info("Current price: " + series.getLastBar().getClosePrice());
+        log.info("shortSma: " + shortSma.getValue(series.getEndIndex()));
+        log.info("longSma: " + longSma.getValue(series.getEndIndex()));
     }
 
     public double getLastBarValue() {
