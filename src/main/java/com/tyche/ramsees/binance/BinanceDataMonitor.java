@@ -8,9 +8,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.BarSeriesManager;
 import org.ta4j.core.BaseBarSeriesBuilder;
 import org.ta4j.core.BaseStrategy;
+import org.ta4j.core.Position;
 import org.ta4j.core.Strategy;
+import org.ta4j.core.TradingRecord;
+import org.ta4j.core.analysis.criteria.NumberOfPositionsCriterion;
+import org.ta4j.core.analysis.criteria.VersusBuyAndHoldCriterion;
+import org.ta4j.core.analysis.criteria.WinningPositionsRatioCriterion;
+import org.ta4j.core.analysis.criteria.pnl.GrossReturnCriterion;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
@@ -28,8 +35,8 @@ public class BinanceDataMonitor {
     public static final int MACD_SHORT = 12;
     public static final int MACD_LONG = 26;
     public static final int MACD_SIGNAL_LENGTH = 9;
-    public static final Number STOP_GAIN = 0.6;
-    public static final Number STOP_LOSS = 0.5;
+    public static final Number STOP_GAIN = 0.5;
+    public static final Number STOP_LOSS = 1;
 
     private final BinanceDataFetcher binanceDataFetcher;
 
@@ -38,16 +45,32 @@ public class BinanceDataMonitor {
 
     // Klines
     private BarSeries series;
+    ClosePriceIndicator closePrice;
     MACDIndicator macd;
     EMAIndicator macdSignal;
     EMAIndicator trendEma;
     private Strategy strategy;
 
+    // BACKTESTING
+    public static final int HISTORICAL_DATA_LENGTH = 1000;
+    public static final boolean BACKTESTING_ENABLED = false;;
+
     @PostConstruct
     public void init() {
         // Init
-        series = new BaseBarSeriesBuilder().withMaxBarCount(TREND_EMA).withName("BINANCE_ETHBUSD").build();
-        var closePrice = new ClosePriceIndicator(series);
+        if(BACKTESTING_ENABLED) {
+            series = new BaseBarSeriesBuilder()
+                .withMaxBarCount(HISTORICAL_DATA_LENGTH)
+                .withName("BINANCE_ETHBUSD")
+                .build();
+        } else {
+            series = new BaseBarSeriesBuilder()
+                .withMaxBarCount(TREND_EMA)
+                .withName("BINANCE_ETHBUSD")
+                .build();
+
+        }
+        closePrice = new ClosePriceIndicator(series);
         macd = new MACDIndicator(closePrice, MACD_SHORT, MACD_LONG);
         macdSignal = new EMAIndicator(macd, MACD_SIGNAL_LENGTH);
         trendEma = new EMAIndicator(closePrice, TREND_EMA);
@@ -63,6 +86,11 @@ public class BinanceDataMonitor {
     }
 
     public void updateKlines() {
+        if(BACKTESTING_ENABLED) {
+            backTesting();
+            return;
+        }
+
         log.info("-----------------------------------------------");
         log.info("Iteration {}", ++iteration);
 
@@ -109,5 +137,49 @@ public class BinanceDataMonitor {
 
     public double getLastBarValue() {
         return series.getLastBar().getClosePrice().doubleValue();
+    }
+
+    // At the moment when the backtesting flag is true the test is ran every minute
+    // Remember to stop running the app after the first backtesting log
+    private void backTesting() {
+        List<KlineResponseDTO> klineList;
+
+        klineList =
+            binanceDataFetcher.fetchLatestKline("ETHBUSD", "1m", HISTORICAL_DATA_LENGTH);
+
+        for(KlineResponseDTO k : klineList) {
+            series.addBar(
+                ZonedDateTime.now(),
+                Double.valueOf(k.getOpen()),
+                Double.valueOf(k.getHigh()),
+                Double.valueOf(k.getLow()),
+                Double.valueOf(k.getClose()),
+                Double.valueOf(k.getVolume())
+            );
+        }
+        BarSeriesManager seriesManager = new BarSeriesManager(series);
+        // We start by the index number TREND_EMA to have enough data to calculate EMAs
+        TradingRecord tradingRecord = seriesManager.run(strategy, TREND_EMA, HISTORICAL_DATA_LENGTH);
+
+        /*
+         * Analysis criteria
+         */
+
+        // Total profit
+        GrossReturnCriterion totalReturn = new GrossReturnCriterion();
+        System.out.println("Total return: " + totalReturn.calculate(series, tradingRecord));
+
+        // Number of positions
+        System.out.println("Number of positions: " + new NumberOfPositionsCriterion().calculate(series, tradingRecord));
+        // Profitable position ratio
+        System.out.println(
+            "Winning positions ratio: " + new WinningPositionsRatioCriterion().calculate(series, tradingRecord));
+        // Total profit vs buy-and-hold
+        System.out.println("Custom strategy return vs buy-and-hold strategy return: "
+            + new VersusBuyAndHoldCriterion(totalReturn).calculate(series, tradingRecord));
+
+        for(Position p : tradingRecord.getPositions()){
+            System.out.println(p.toString());
+        }
     }
 }
