@@ -25,6 +25,11 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class BinanceDataFetcher implements DataFetcher {
 
+    public String getServerTime() {
+        var client = new SpotClientImpl();
+        return client.createMarket().time();
+    }
+
     public PriceResponseDTO getPairPrice(String symbol) {
         var client = new SpotClientImpl();
 
@@ -40,12 +45,29 @@ public class BinanceDataFetcher implements DataFetcher {
     }
 
     public List<KlineResponseDTO> fetchLatestKline(String symbol, String interval, Integer limit) {
+        return fetchLatestKline(symbol, interval, null, null, limit);
+    }
+
+    public List<KlineResponseDTO> fetchLatestKline(
+        String symbol,
+        String interval,
+        Long startTime,
+        Long endTime,
+        Integer limit) {
         var client = new SpotClientImpl();
 
         var parameters = new LinkedHashMap<String,Object>();
         parameters.put("symbol", symbol);
         parameters.put("interval", interval);
         parameters.put("limit", limit);
+
+        if(startTime != null){
+            parameters.put("startTime", startTime);
+        }
+
+        if(endTime != null){
+            parameters.put("endTime", endTime);
+        }
 
         var result = client.createMarket().klines(parameters);
 

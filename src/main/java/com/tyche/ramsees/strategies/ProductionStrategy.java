@@ -1,6 +1,9 @@
 package com.tyche.ramsees.strategies;
 
+import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import com.tyche.ramsees.binance.BinanceDataFetcher;
+import java.time.ZonedDateTime;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
@@ -31,21 +34,22 @@ public class ProductionStrategy implements RamseesBaseStrategy {
   private EMAIndicator trendEma;
   private Strategy strategy;
 
-  public ProductionStrategy(BarSeries series) {
-    this.series = series;
-  }
+  private boolean minimumBarCountReached = false;
 
-  @Override
-  public Strategy buildStrategy() {
-    if (series == null) {
-      throw new IllegalArgumentException("Series cannot be null");
-    }
 
+  public ProductionStrategy() {
+    series = new BaseBarSeriesBuilder()
+        .withMaxBarCount(1000)
+        .withName("BINANCE_ETHBUSD")
+        .build();
     closePrice = new ClosePriceIndicator(series);
     macd = new MACDIndicator(closePrice, MACD_SHORT, MACD_LONG);
     macdSignal = new EMAIndicator(macd, MACD_SIGNAL_LENGTH);
     trendEma = new EMAIndicator(closePrice, TREND_EMA);
+  }
 
+  @Override
+  public Strategy buildStrategy() {
     var buyingRule = new OverIndicatorRule(closePrice, trendEma)
         .and(new CrossedUpIndicatorRule(macd, macdSignal));
 
@@ -54,6 +58,30 @@ public class ProductionStrategy implements RamseesBaseStrategy {
         .or(new StopLossRule(closePrice, STOP_LOSS));
     strategy = new BaseStrategy(buyingRule, sellingRule);
     return strategy;
+  }
+
+  @Override
+  public void fetchData(BinanceDataFetcher binanceDataFetcher) {
+    List<KlineResponseDTO> klineList;
+    if(!minimumBarCountReached){
+      // Fetch the latest initial amount of bars in one request
+      klineList = binanceDataFetcher.fetchLatestKline("ETHBUSD", getInterval(), 1000);
+      minimumBarCountReached = true;
+    } else {
+      klineList =
+          binanceDataFetcher.fetchLatestKline("ETHBUSD", getInterval(), 1);
+    }
+
+    for(KlineResponseDTO k : klineList) {
+      series.addBar(
+          ZonedDateTime.now(),
+          Double.valueOf(k.getOpen()),
+          Double.valueOf(k.getHigh()),
+          Double.valueOf(k.getLow()),
+          Double.valueOf(k.getClose()),
+          Double.valueOf(k.getVolume())
+      );
+    }
   }
 
   public boolean shouldEnter() {
@@ -66,6 +94,11 @@ public class ProductionStrategy implements RamseesBaseStrategy {
 
   public double getLastBarValue() {
     return series.getLastBar().getClosePrice().doubleValue();
+  }
+
+  @Override
+  public String getInterval() {
+    return "1m";
   }
 
   @Override
