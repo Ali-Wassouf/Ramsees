@@ -10,10 +10,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class BinanceTradingService {
-
     private final TradingManager tradingManager;
     private final BinanceDataMonitor binanceDataMonitor;
-
 
     public void checkTheMarket() {
         binanceDataMonitor.updateKlines();

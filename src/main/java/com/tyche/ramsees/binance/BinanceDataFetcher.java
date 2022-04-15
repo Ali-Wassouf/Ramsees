@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import com.tyche.ramsees.api.dto.PriceResponseDTO;
+import com.tyche.ramsees.api.dto.ServerTimeResponseDTO;
 import com.tyche.ramsees.fetchers.DataFetcher;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -25,6 +26,15 @@ import org.springframework.web.client.RestTemplate;
 @Slf4j
 public class BinanceDataFetcher implements DataFetcher {
 
+    public String getServerTime() {
+        var client = new SpotClientImpl();
+        var result = client.createMarket().time();
+
+        var gson = new Gson();
+        return gson.fromJson(result,
+            ServerTimeResponseDTO.class).getServerTime();
+    }
+
     public PriceResponseDTO getPairPrice(String symbol) {
         var client = new SpotClientImpl();
 
@@ -40,12 +50,29 @@ public class BinanceDataFetcher implements DataFetcher {
     }
 
     public List<KlineResponseDTO> fetchLatestKline(String symbol, String interval, Integer limit) {
+        return fetchLatestKline(symbol, interval, null, null, limit);
+    }
+
+    public List<KlineResponseDTO> fetchLatestKline(
+        String symbol,
+        String interval,
+        Long startTime,
+        Long endTime,
+        Integer limit) {
         var client = new SpotClientImpl();
 
         var parameters = new LinkedHashMap<String,Object>();
         parameters.put("symbol", symbol);
         parameters.put("interval", interval);
         parameters.put("limit", limit);
+
+        if(startTime != null){
+            parameters.put("startTime", startTime);
+        }
+
+        if(endTime != null){
+            parameters.put("endTime", endTime);
+        }
 
         var result = client.createMarket().klines(parameters);
 
