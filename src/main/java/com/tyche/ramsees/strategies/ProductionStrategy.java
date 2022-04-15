@@ -12,20 +12,19 @@ import org.ta4j.core.Strategy;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
-import org.ta4j.core.rules.CrossedDownIndicatorRule;
 import org.ta4j.core.rules.CrossedUpIndicatorRule;
-import org.ta4j.core.rules.OverIndicatorRule;
 import org.ta4j.core.rules.StopGainRule;
 import org.ta4j.core.rules.StopLossRule;
+import org.ta4j.core.rules.UnderIndicatorRule;
 
 @Slf4j
 public class ProductionStrategy implements RamseesBaseStrategy {
-  final int TREND_EMA = 100;
-  final int MACD_SHORT = 12;
-  final int MACD_LONG = 26;
-  final int MACD_SIGNAL_LENGTH = 9;
-  final Number STOP_GAIN = 0.5;
-  final Number STOP_LOSS = 1;
+  final int trendEmaLength = 100;
+  final int macdShort = 12;
+  final int macdLong = 26;
+  final int macdSignalLength = 9;
+  final Number stopGain = 0.5;
+  final Number stopLoss = 0.3;
 
   private BarSeries series;
   private ClosePriceIndicator closePrice;
@@ -43,19 +42,20 @@ public class ProductionStrategy implements RamseesBaseStrategy {
         .withName("BINANCE_ETHBUSD")
         .build();
     closePrice = new ClosePriceIndicator(series);
-    macd = new MACDIndicator(closePrice, MACD_SHORT, MACD_LONG);
-    macdSignal = new EMAIndicator(macd, MACD_SIGNAL_LENGTH);
-    trendEma = new EMAIndicator(closePrice, TREND_EMA);
+    macd = new MACDIndicator(closePrice, macdShort, macdLong);
+    macdSignal = new EMAIndicator(macd, macdSignalLength);
+    trendEma = new EMAIndicator(closePrice, trendEmaLength);
   }
 
   @Override
   public Strategy buildStrategy() {
-    var buyingRule = new OverIndicatorRule(closePrice, trendEma)
-        .and(new CrossedUpIndicatorRule(macd, macdSignal));
+    var buyingRule = new CrossedUpIndicatorRule(macd, macdSignal)
+        .and((i, tradingRecord) -> (macd.getValue(i).doubleValue() < 0))
+        .and(new UnderIndicatorRule(closePrice, trendEma));
 
-    var sellingRule = new CrossedDownIndicatorRule(macd, macdSignal)
-        .or(new StopGainRule(closePrice, STOP_GAIN))
-        .or(new StopLossRule(closePrice, STOP_LOSS));
+    var sellingRule = new StopGainRule(closePrice, stopGain)
+        .or(new StopLossRule(closePrice, stopLoss));
+
     strategy = new BaseStrategy(buyingRule, sellingRule);
     return strategy;
   }
@@ -98,7 +98,7 @@ public class ProductionStrategy implements RamseesBaseStrategy {
 
   @Override
   public String getInterval() {
-    return "1m";
+    return "5m";
   }
 
   @Override

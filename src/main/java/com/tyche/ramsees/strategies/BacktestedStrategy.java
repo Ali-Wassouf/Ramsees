@@ -16,19 +16,17 @@ import org.ta4j.core.analysis.criteria.WinningPositionsRatioCriterion;
 import org.ta4j.core.analysis.criteria.pnl.GrossReturnCriterion;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
-import org.ta4j.core.indicators.RSIIndicator;
-import org.ta4j.core.indicators.StochasticOscillatorDIndicator;
-import org.ta4j.core.indicators.StochasticOscillatorKIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
-import org.ta4j.core.rules.CrossedDownIndicatorRule;
 import org.ta4j.core.rules.CrossedUpIndicatorRule;
-import org.ta4j.core.rules.OverIndicatorRule;
 import org.ta4j.core.rules.StopGainRule;
 import org.ta4j.core.rules.StopLossRule;
+import org.ta4j.core.rules.UnderIndicatorRule;
 
 public class BacktestedStrategy implements RamseesBaseStrategy{
   public static final int HISTORICAL_DATA_MINIMUM_LENGTH = 100;
-  public static final int HISTORICAL_DATA_LENGTH = 1000;
+  public static final long THREE_MONTHS_SHIFT = 8035200000L;
+  public static final long SIX_MONTHS_SHIFT = 16070400000L;
+  public static final long NINE_MONTHS_SHIFT = 24105600000L;
 
   private BarSeries series;
   private Strategy strategy;
@@ -47,7 +45,6 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
 
   public BacktestedStrategy() {
     series = new BaseBarSeriesBuilder()
-        .withMaxBarCount(1000)
         .withName("BINANCE_ETHBUSD")
         .build();
     closePrice = new ClosePriceIndicator(series);
@@ -60,7 +57,7 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
   public Strategy buildStrategy() {
     var buyingRule = new CrossedUpIndicatorRule(macd, macdSignal)
         .and((i, tradingRecord) -> (macd.getValue(i).doubleValue() < 0))
-        .and(new OverIndicatorRule(closePrice, trendEma));
+        .and(new UnderIndicatorRule(closePrice, trendEma));
 
     var sellingRule = new StopGainRule(closePrice, stopGain)
         .or(new StopLossRule(closePrice, stopLoss));
@@ -71,18 +68,33 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
 
   @Override
   public void fetchData(BinanceDataFetcher binanceDataFetcher) {
-    var klineList =
-        binanceDataFetcher.fetchLatestKline("ETHBUSD", getInterval(), 1000);
+    var halfDayMills = 1000 * 60 * 60 * 12;
+    var endTime = Long.valueOf(binanceDataFetcher.getServerTime()) - NINE_MONTHS_SHIFT;
+    var startTime = endTime - halfDayMills;
+    var halfDays = 28 * 2;
 
-    for(KlineResponseDTO k : klineList) {
-      series.addBar(
-          ZonedDateTime.now(),
-          Double.valueOf(k.getOpen()),
-          Double.valueOf(k.getHigh()),
-          Double.valueOf(k.getLow()),
-          Double.valueOf(k.getClose()),
-          Double.valueOf(k.getVolume())
-      );
+    for(int i = 0; i < halfDays ; i++){
+      var klineList =
+          binanceDataFetcher.fetchLatestKline(
+              "ETHBUSD",
+              getInterval(),
+              startTime,
+              endTime,
+              1000);
+
+      for(KlineResponseDTO k : klineList) {
+        series.addBar(
+            ZonedDateTime.now(),
+            Double.valueOf(k.getOpen()),
+            Double.valueOf(k.getHigh()),
+            Double.valueOf(k.getLow()),
+            Double.valueOf(k.getClose()),
+            Double.valueOf(k.getVolume())
+        );
+      }
+
+      endTime -= halfDayMills;
+      startTime -= halfDayMills;
     }
   }
 
@@ -103,7 +115,7 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
 
   @Override
   public String getInterval() {
-    return "3m";
+    return "5m";
   }
 
   @Override
@@ -114,7 +126,7 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
 
     BarSeriesManager seriesManager = new BarSeriesManager(series);
     // We start by the index number TREND_EMA to have enough data to calculate EMAs
-    TradingRecord tradingRecord = seriesManager.run(strategy, HISTORICAL_DATA_MINIMUM_LENGTH, HISTORICAL_DATA_LENGTH);
+    TradingRecord tradingRecord = seriesManager.run(strategy, HISTORICAL_DATA_MINIMUM_LENGTH, series.getBarCount());
 
     /*
      * Analysis criteria

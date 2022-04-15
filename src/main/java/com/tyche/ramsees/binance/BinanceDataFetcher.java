@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import com.tyche.ramsees.api.dto.PriceResponseDTO;
+import com.tyche.ramsees.api.dto.ServerTimeResponseDTO;
 import com.tyche.ramsees.fetchers.DataFetcher;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -27,7 +28,11 @@ public class BinanceDataFetcher implements DataFetcher {
 
     public String getServerTime() {
         var client = new SpotClientImpl();
-        return client.createMarket().time();
+        var result = client.createMarket().time();
+
+        var gson = new Gson();
+        return gson.fromJson(result,
+            ServerTimeResponseDTO.class).getServerTime();
     }
 
     public PriceResponseDTO getPairPrice(String symbol) {
