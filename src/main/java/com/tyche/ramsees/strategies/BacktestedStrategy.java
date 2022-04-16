@@ -3,6 +3,7 @@ package com.tyche.ramsees.strategies;
 import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import com.tyche.ramsees.binance.BinanceDataFetcher;
 import java.time.ZonedDateTime;
+import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BarSeriesManager;
 import org.ta4j.core.BaseBarSeriesBuilder;
@@ -54,7 +55,7 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
   }
 
   @Override
-  public Strategy buildStrategy() {
+  public Strategy build() {
     var buyingRule = new CrossedUpIndicatorRule(macd, macdSignal)
         .and((i, tradingRecord) -> (macd.getValue(i).doubleValue() < 0))
         .and(new UnderIndicatorRule(closePrice, trendEma));
@@ -99,12 +100,12 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
   }
 
   @Override
-  public boolean shouldEnter() {
+  public boolean shouldEnter(int endIndex) {
     return false;
   }
 
   @Override
-  public boolean shouldExit() {
+  public boolean shouldExit(int endIndex) {
     return false;
   }
 
@@ -113,13 +114,12 @@ public class BacktestedStrategy implements RamseesBaseStrategy{
     return 0;
   }
 
-  @Override
   public String getInterval() {
     return "5m";
   }
 
   @Override
-  public void logStatus() {
+  public void logStatus(Bar lastBae, int endIndex) {
     if(strategy == null || series == null) {
       return;
     }

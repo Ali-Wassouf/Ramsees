@@ -1,7 +1,6 @@
 package com.tyche.ramsees.binance;
 
-import com.tyche.ramsees.strategies.BacktestedStrategy;
-import com.tyche.ramsees.strategies.ProductionStrategy;
+import com.tyche.ramsees.strategies.MacDBasedStrategy;
 import com.tyche.ramsees.strategies.RamseesBaseStrategy;
 import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -14,13 +13,13 @@ import org.springframework.stereotype.Service;
 public class BinanceDataMonitor {
     private final BinanceDataFetcher binanceDataFetcher;
     // Easy switch between strategies
-    private final RamseesBaseStrategy strategy = new ProductionStrategy();
+    private final RamseesBaseStrategy strategy = new MacDBasedStrategy();
 
     private int iteration = 0;
 
     @PostConstruct
     public void init() {
-        strategy.buildStrategy();
+        strategy.build();
     }
 
     public void updateKlines() {

@@ -1,22 +1,21 @@
 package com.tyche.ramsees.strategies;
 
 import com.tyche.ramsees.binance.BinanceDataFetcher;
+import org.ta4j.core.Bar;
 import org.ta4j.core.Strategy;
 
 public interface RamseesBaseStrategy {
 
-  Strategy buildStrategy();
+  Strategy build();
 
   void fetchData(BinanceDataFetcher binanceDataFetcher);
 
-  boolean shouldEnter();
+  boolean shouldEnter(int endIndex);
 
-  boolean shouldExit();
+  boolean shouldExit(int endIndex);
 
   double getLastBarValue();
 
-  String getInterval();
-
-  void logStatus();
+  void logStatus(Bar lastBar, int endIndex);
 
 }
