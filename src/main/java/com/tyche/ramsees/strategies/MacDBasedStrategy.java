@@ -1,13 +1,8 @@
 package com.tyche.ramsees.strategies;
 
-import com.tyche.ramsees.api.dto.KlineResponseDTO;
-import com.tyche.ramsees.binance.BinanceDataFetcher;
-import java.time.ZonedDateTime;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
-import org.ta4j.core.BaseBarSeriesBuilder;
 import org.ta4j.core.BaseStrategy;
 import org.ta4j.core.Strategy;
 import org.ta4j.core.indicators.EMAIndicator;
@@ -32,22 +27,21 @@ public class MacDBasedStrategy implements RamseesBaseStrategy {
     private final MACDIndicator macd;
     private final EMAIndicator macdSignal;
     private final EMAIndicator trendEma;
-    private Strategy strategy;
 
+    protected Strategy strategy;
+    protected BarSeries series;
 
-    public MacDBasedStrategy() {
-        series = new BaseBarSeriesBuilder()
-            .withMaxBarCount(1000)
-            .withName("BINANCE_ETHBUSD")
-            .build();
+    public MacDBasedStrategy(BarSeries series) {
+        this.series = series;
         closePrice = new ClosePriceIndicator(series);
         macd = new MACDIndicator(closePrice, MACD_SHORT, MACD_LONG);
         macdSignal = new EMAIndicator(macd, MACD_SIGNAL_LENGTH);
         trendEma = new EMAIndicator(closePrice, TREND_EMA_LENGTH);
+        build();
     }
 
     @Override
-    public Strategy build() {
+    public void build() {
         var buyingRule = new CrossedUpIndicatorRule(macd, macdSignal)
             .and((i, tradingRecord) -> (macd.getValue(i).doubleValue() < 0))
             .and(new UnderIndicatorRule(closePrice, trendEma));
@@ -56,12 +50,6 @@ public class MacDBasedStrategy implements RamseesBaseStrategy {
             .or(new StopLossRule(closePrice, STOP_LOSS));
 
         strategy = new BaseStrategy(buyingRule, sellingRule);
-        return strategy;
-    }
-
-    @Override
-    public void fetchData(BinanceDataFetcher binanceDataFetcher) {
-
     }
 
     @Override
@@ -75,7 +63,7 @@ public class MacDBasedStrategy implements RamseesBaseStrategy {
     }
 
     @Override
-    public void logStatus(Bar lastBar, int endIndex) {
+    public void logStatus(Bar lastBar, Integer endIndex) {
         log.info("Current price: " + lastBar.getClosePrice());
         log.info("trendEma: " + trendEma.getValue(endIndex));
         log.info("macd: " + macd.getValue(endIndex));

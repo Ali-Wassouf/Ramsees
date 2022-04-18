@@ -11,34 +11,34 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class BinanceDataMonitor {
+
     private final BinanceDataFetcher binanceDataFetcher;
     // Easy switch between strategies
-    private final RamseesBaseStrategy strategy = new MacDBasedStrategy();
+    private RamseesBaseStrategy strategy;
 
     private int iteration = 0;
 
     @PostConstruct
     public void init() {
-        strategy.build();
+        strategy = new MacDBasedStrategy(binanceDataFetcher.getSeries());
     }
 
     public void updateKlines() {
         log.info("-----------------------------------------------");
         log.info("Iteration {}", ++iteration);
 
-        strategy.fetchData(binanceDataFetcher);
-        strategy.logStatus();
+        strategy.logStatus(binanceDataFetcher.getLatestBar(), binanceDataFetcher.getEndIndex());
     }
 
     public boolean shouldEnter() {
-        return strategy.shouldEnter();
+        return strategy.shouldEnter(binanceDataFetcher.getEndIndex());
     }
 
     public boolean shouldExit() {
-        return strategy.shouldExit();
+        return strategy.shouldExit(binanceDataFetcher.getEndIndex());
     }
 
     public double getLastBarValue() {
-        return strategy.getLastBarValue();
+        return binanceDataFetcher.getLastBarValue();
     }
 }

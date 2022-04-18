@@ -1,35 +1,15 @@
 package com.tyche.ramsees.strategies;
 
 
+import com.tyche.ramsees.binance.BinanceDataFetcher;
 import org.junit.jupiter.api.Test;
 
 class MacDBasedStrategyTest {
 
     @Test
-    void buildStrategy() {
-    }
-
-    @Test
-    void fetchData() {
-    }
-
-    @Test
-    void shouldEnter() {
-    }
-
-    @Test
-    void shouldExit() {
-    }
-
-    @Test
-    void getLastBarValue() {
-    }
-
-    @Test
-    void getInterval() {
-    }
-
-    @Test
-    void logStatus() {
+    void test() {
+        var datatFetcher = new BinanceDataFetcher();
+        var macDBased = new MacDBasedStrategyMock(datatFetcher.getSeries());
+        macDBased.logStatus(datatFetcher.getLatestBar(), datatFetcher.getEndIndex());
     }
 }

@@ -4,33 +4,29 @@ import com.binance.connector.client.impl.SpotClientImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import com.tyche.ramsees.api.dto.KlineResponseDTO;
-import com.tyche.ramsees.api.dto.PriceResponseDTO;
 import com.tyche.ramsees.api.dto.ServerTimeResponseDTO;
 import com.tyche.ramsees.fetchers.DataFetcher;
-import java.lang.reflect.Type;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.BaseBarSeriesBuilder;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class BinanceDataFetcher implements DataFetcher {
 
-    private final BarSeries series;
+    protected final BarSeries series = new BaseBarSeriesBuilder()
+        .withName("BINANCE_ETHBUSD")
+        .build();
     private boolean minimumBarCountReached = false;
+    public static final long NINE_MONTHS_SHIFT = 24105600000L;
 
     public String getServerTime() {
         var client = new SpotClientImpl();
@@ -77,7 +73,7 @@ public class BinanceDataFetcher implements DataFetcher {
     }
 
     @Override
-    public Bar getLatestBar(){
+    public Bar getLatestBar() {
         return series.getLastBar();
     }
 
@@ -90,12 +86,7 @@ public class BinanceDataFetcher implements DataFetcher {
         return fetchLatestKline(symbol, interval, null, null, limit);
     }
 
-    private List<KlineResponseDTO> fetchLatestKline(
-        String symbol,
-        String interval,
-        Long startTime,
-        Long endTime,
-        Integer limit) {
+    protected List<KlineResponseDTO> fetchLatestKline(String symbol, String interval, Long startTime, Long endTime, Integer limit) {
         var client = new SpotClientImpl();
 
         var parameters = new LinkedHashMap<String, Object>();
@@ -122,7 +113,7 @@ public class BinanceDataFetcher implements DataFetcher {
                     new ObjectMapper().readValue(o.toString(), KlineResponseDTO.class);
                 klineList.add(klineResponseDTO);
             } catch (JsonProcessingException e) {
-                log.info("Exception while fetching the klines", e);
+                log.error("Exception while fetching the klines", e);
             }
         }
 

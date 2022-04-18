@@ -1,6 +1,6 @@
 package com.tyche.ramsees.utilities;
 
-import com.tyche.ramsees.Step;
+import com.tyche.ramsees.constants.Step;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
