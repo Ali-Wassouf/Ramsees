@@ -1,6 +1,6 @@
 package com.tyche.ramsees.binance;
 
-import com.tyche.ramsees.Step;
+import com.tyche.ramsees.constants.Step;
 import com.tyche.ramsees.utilities.TradingManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
