@@ -9,9 +9,12 @@ import org.ta4j.core.BarSeriesManager;
 import org.ta4j.core.Position;
 import org.ta4j.core.TradingRecord;
 import org.ta4j.core.analysis.criteria.NumberOfPositionsCriterion;
+import org.ta4j.core.analysis.criteria.NumberOfWinningPositionsCriterion;
 import org.ta4j.core.analysis.criteria.VersusBuyAndHoldCriterion;
 import org.ta4j.core.analysis.criteria.WinningPositionsRatioCriterion;
 import org.ta4j.core.analysis.criteria.pnl.GrossReturnCriterion;
+import org.ta4j.core.cost.LinearTransactionCostModel;
+import org.ta4j.core.cost.ZeroCostModel;
 
 @Slf4j
 class MacDBasedStrategyMock extends MacDBasedStrategy {
@@ -27,7 +30,7 @@ class MacDBasedStrategyMock extends MacDBasedStrategy {
             return;
         }
 
-        BarSeriesManager seriesManager = new BarSeriesManager(series);
+        BarSeriesManager seriesManager = new BarSeriesManager(series, new LinearTransactionCostModel(0.1), new ZeroCostModel());
         // We start by the index number TREND_EMA to have enough data to calculate EMAs
         TradingRecord tradingRecord = seriesManager.run(strategy, HISTORICAL_DATA_MINIMUM_LENGTH, series.getBarCount());
 
@@ -43,7 +46,7 @@ class MacDBasedStrategyMock extends MacDBasedStrategy {
         log.info(("Number of positions: " + new NumberOfPositionsCriterion().calculate(series, tradingRecord)));
         // Number of positions
         log.info((
-            "Winning positions ratio: " + new WinningPositionsRatioCriterion().calculate(series, tradingRecord)));
+            "Number of winning positions: " + new NumberOfWinningPositionsCriterion().calculate(series, tradingRecord)));
         // Total profit vs buy-and-hold
         log.info(("Custom strategy return vs buy-and-hold strategy return: "
             + new VersusBuyAndHoldCriterion(totalReturn).calculate(series, tradingRecord)));
