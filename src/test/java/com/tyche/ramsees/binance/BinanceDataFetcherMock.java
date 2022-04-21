@@ -9,7 +9,7 @@ public class BinanceDataFetcherMock extends BinanceDataFetcher {
     @Override
     public BarSeries getSeries() {
         var halfDayMills = 1000 * 60 * 60 * 12;
-        var endTime = Long.parseLong(this.getServerTime()) - NINE_MONTHS_SHIFT;
+        var endTime = Long.parseLong(this.getServerTime());
         var startTime = endTime - halfDayMills;
         var halfDays = 28 * 2;
 
