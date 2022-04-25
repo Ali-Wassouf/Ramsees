@@ -28,7 +28,7 @@ public class MacDBasedStrategy implements RamseesBaseStrategy {
     private final EMAIndicator macdSignal;
     private final EMAIndicator trendEma;
 
-    protected Strategy strategy;
+    public Strategy strategy;
     protected BarSeries series;
 
     public MacDBasedStrategy(BarSeries series) {

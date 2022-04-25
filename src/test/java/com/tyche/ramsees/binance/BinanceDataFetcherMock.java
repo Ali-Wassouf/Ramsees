@@ -4,7 +4,7 @@ import com.tyche.ramsees.api.dto.KlineResponseDTO;
 import java.time.ZonedDateTime;
 import org.ta4j.core.BarSeries;
 
-public class BinanceDataFetcherMock_ extends BinanceDataFetcher {
+public class BinanceDataFetcherMock extends BinanceDataFetcher {
 
     @Override
     public BarSeries getSeries() {
