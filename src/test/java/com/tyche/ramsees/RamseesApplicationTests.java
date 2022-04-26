@@ -1,6 +1,6 @@
 package com.tyche.ramsees;
 
-import com.tyche.ramsees.strategies.BinanceDataFetcherMock_;
+import com.tyche.ramsees.binance.BinanceDataFetcherMock;
 import java.text.SimpleDateFormat;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
@@ -16,7 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.Indicator;
-import org.ta4j.core.indicators.EMAIndicator;
+import org.ta4j.core.indicators.SMAIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsLowerIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
@@ -27,16 +27,16 @@ import org.ta4j.core.num.Num;
 class RamseesApplicationTests {
 
    public static void main(String... args){
-       var binanceDataFetcher = new BinanceDataFetcherMock_();
+       var binanceDataFetcher = new BinanceDataFetcherMock();
        var series = binanceDataFetcher.getSeries();
        ClosePriceIndicator closePrice = new ClosePriceIndicator(series);
-       EMAIndicator avg14 = new EMAIndicator(closePrice, 20*24*4);
-       StandardDeviationIndicator sd14 = new StandardDeviationIndicator(closePrice, 20*24*4);
+       SMAIndicator avg20 = new SMAIndicator(closePrice, 20);
+       StandardDeviationIndicator sd = new StandardDeviationIndicator(avg20, 3);
 
        // Bollinger bands
-       BollingerBandsMiddleIndicator middleBBand = new BollingerBandsMiddleIndicator(avg14);
-       BollingerBandsLowerIndicator lowBBand = new BollingerBandsLowerIndicator(middleBBand, sd14);
-       BollingerBandsUpperIndicator upBBand = new BollingerBandsUpperIndicator(middleBBand, sd14);
+       BollingerBandsMiddleIndicator middleBBand = new BollingerBandsMiddleIndicator(avg20);
+       BollingerBandsLowerIndicator lowBBand = new BollingerBandsLowerIndicator(middleBBand, sd);
+       BollingerBandsUpperIndicator upBBand = new BollingerBandsUpperIndicator(middleBBand, sd);
 
        /*
         * Building chart dataset
@@ -44,7 +44,7 @@ class RamseesApplicationTests {
        TimeSeriesCollection dataset = new TimeSeriesCollection();
        dataset.addSeries(buildChartBarSeries(series, closePrice, "ETH"));
        dataset.addSeries(buildChartBarSeries(series, lowBBand, "Low Bollinger Band"));
-       dataset.addSeries(buildChartBarSeries(series, middleBBand, "middle Bollinger Band"));
+       dataset.addSeries(buildChartBarSeries(series, middleBBand, "Middle Bollinger Band"));
        dataset.addSeries(buildChartBarSeries(series, upBBand, "High Bollinger Band"));
 
        /*
@@ -60,7 +60,7 @@ class RamseesApplicationTests {
        );
        XYPlot plot = (XYPlot) chart.getPlot();
        DateAxis axis = (DateAxis) plot.getDomainAxis();
-       axis.setDateFormatOverride(new SimpleDateFormat("yyyy-MM-dd"));
+       axis.setDateFormatOverride(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
 
        /*
         * Displaying the chart
@@ -87,13 +87,22 @@ class RamseesApplicationTests {
         frame.setVisible(true);
     }
 
-    private static org.jfree.data.time.TimeSeries buildChartBarSeries(BarSeries barSeries, Indicator<Num> indicator,
+    private static org.jfree.data.time.TimeSeries buildChartBarSeries(
+        BarSeries barSeries,
+        Indicator<Num> indicator,
         String name) {
         org.jfree.data.time.TimeSeries chartBarSeries = new org.jfree.data.time.TimeSeries(name);
         for (int i = 0; i < barSeries.getBarCount(); i++) {
             Bar bar = barSeries.getBar(i);
-            chartBarSeries.add(new Millisecond(bar.getEndTime().getNano()* 1000000,bar.getEndTime().getSecond(), bar.getEndTime().getMinute(),
-                    bar.getEndTime().getHour(), bar.getEndTime().getDayOfMonth(), bar.getEndTime().getMonthValue(), bar.getEndTime().getYear()),
+            chartBarSeries.addOrUpdate(
+                new Millisecond(
+                    bar.getEndTime().getNano() / 1000000,
+                    bar.getEndTime().getSecond(),
+                    bar.getEndTime().getMinute(),
+                    bar.getEndTime().getHour(),
+                    bar.getEndTime().getDayOfMonth(),
+                    bar.getEndTime().getMonthValue(),
+                    bar.getEndTime().getYear()),
                 indicator.getValue(i).doubleValue());
         }
         return chartBarSeries;
