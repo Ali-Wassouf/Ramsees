@@ -1,7 +1,5 @@
 package com.tyche.ramsees.strategies;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import lombok.extern.slf4j.Slf4j;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
@@ -11,8 +9,8 @@ import org.ta4j.core.TradingRecord;
 import org.ta4j.core.analysis.criteria.NumberOfPositionsCriterion;
 import org.ta4j.core.analysis.criteria.NumberOfWinningPositionsCriterion;
 import org.ta4j.core.analysis.criteria.VersusBuyAndHoldCriterion;
-import org.ta4j.core.analysis.criteria.WinningPositionsRatioCriterion;
 import org.ta4j.core.analysis.criteria.pnl.GrossReturnCriterion;
+import org.ta4j.core.analysis.criteria.pnl.NetProfitCriterion;
 import org.ta4j.core.cost.LinearTransactionCostModel;
 import org.ta4j.core.cost.ZeroCostModel;
 
@@ -25,22 +23,23 @@ class MacDBasedStrategyMock extends MacDBasedStrategy {
     }
 
     @Override
-    public void logStatus(Bar lastBae, Integer endIndex) {
+    public void logStatus(Bar lastBar, Integer endIndex) {
         if (strategy == null) {
             return;
         }
 
-        BarSeriesManager seriesManager = new BarSeriesManager(series, new LinearTransactionCostModel(0.1), new ZeroCostModel());
-        // We start by the index number TREND_EMA to have enough data to calculate EMAs
+        BarSeriesManager seriesManager = new BarSeriesManager(series, new LinearTransactionCostModel(0.001), new ZeroCostModel());
         TradingRecord tradingRecord = seriesManager.run(strategy, HISTORICAL_DATA_MINIMUM_LENGTH, series.getBarCount());
 
         /*
          * Analysis criteria
          */
 
-        // Total profit
+        // Profit
         GrossReturnCriterion totalReturn = new GrossReturnCriterion();
         log.info("Total return: " + totalReturn.calculate(series, tradingRecord));
+        NetProfitCriterion netProfitCriterion = new NetProfitCriterion();
+        log.info("Net profit: " + netProfitCriterion.calculate(series, tradingRecord));
 
         // Profitable position ratio
         log.info(("Number of positions: " + new NumberOfPositionsCriterion().calculate(series, tradingRecord)));
